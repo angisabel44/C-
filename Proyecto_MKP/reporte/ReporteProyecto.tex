@@ -1,0 +1,167 @@
+\documentclass[12pt,a4paper,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{algorithm2e}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{color}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+
+\author{Facultad de ingeniería mecánica y eléctrica \\ Posgrado de ingeniería en sistemas \\ \\ Angel Isabel Moreno Saucedo \\ \texttt{angisabel44@hotmail.com}}
+\title{Una búsqueda dispersa para el problema de la mochila multidimensional}
+
+\begin{document}
+\maketitle
+El problema de la mochila multidimensional (MKP por sus siglas en ingles: \emph{multidimensional knapsack problem}) es un problema de optimización combinatoria NP-duro. Este problema es bien estudiado, se encuentran muchos algoritmos exactos y metaheur\'isticos para la resolución del problema. En este articulo se propone una metaheur\'istica de búsqueda dispersa debido a la estructura del problema se puede implementar fácilmente. Los resultados obtenidos fueron enriquecedor para el problema MKP.
+
+\section{Problema de la mochila multidimensional}
+Sea $I$ un conjunto de $n$ objetos con beneficios $b_{i} > 0$ y $m$ capacidades $c_j$. Cada objeto $i$ consume una cantidad $w_{ji} \geq 0$ en cada capacidad $j$.
+El objetivo es escoger un subconjunto de objetos que maximicen el beneficio total sin exceder las $m$ capacidades. El modelo de programación lineal entera para el MKP es como sigue:
+\begin{align}
+\text{maximizar} & z = \sum_{i = 1}^{n} b_{i}x_{i} & \label{objetivo} \\
+\text{sujeto a:} & \sum_{i = 1}^{n} w_{ji}x_{i} \leq c_{j} & j \in \{1, 2,..., m\} \label{restricciones} \\
+ & x_{i} \in \{0, 1\} & i \in \{1, 2,..., n\} \label{desicion}
+\end{align}
+donde $x_{i}$ es la variable de decisión que indica que objetos son seleccionados. Las $m$ restricciones en \ref{restricciones} también son conocidas como dimensiones.
+
+\section{Método de solución}
+En este articulo proponemos una búsqueda dispersa (SS por sus siglas en ingles: \emph{scatter search}). Sus componentes proporcionan una buena opción para resolver el problema. Se explica primero el algoritmo del constructivo para generar una solución y luego el algoritmo de la búsqueda local.
+
+Para generar una solución se utilizo un algoritmo constructivo simple, el cual consiste en agregar objetos de forma aleatoria hasta que ya no haya mas objetos \'o alguna de las $m$ restricciones de \ref{restricciones} no se satisfaga. El algoritmo \ref{constructivo} muestra la lista de pasos del constructivo.
+
+\begin{algorithm}
+\KwData{Instancia de MKP.}
+\KwResult{Soluci\'on S}
+Crear la lista de objetos $L$ y ordenarla de forma aleatoria\\
+$w_j = 0$ para todas las dimensiones\\
+$S = \emptyset$ \\
+\While{$w_j  \leq W_j$}
+{
+	Escogemos el primer objeto de L \\
+	\If{ObjetoCabe()}
+	{
+		Agregamos el objeto a $S$ \\
+		Borramos el objeto de $L$\\
+		Actualizamos las $w_j$ \\
+	}
+	\If{$L = \emptyset$}
+	{
+		Terminar
+	}
+}
+Regresar S
+\caption{Pseudocódigo constructivo}
+\label{constructivo}
+\end{algorithm}
+
+A continuación, una vez generada una solución sigue mejorar la solucion aplicando una búsqueda local (LS por sus siglas en ingles: \emph{local search}). Se utiliza como operador para generar vecinos de la solución en eliminar un objeto que este seleccionado y agregar otro que no encuentre agregado. Es decir, si se tiene como solución el vector $S = (1, 1, 1, 0, 1, 0, 0)$ un vecino de $S$ es $(0, 1, 1, 1, 1, 0, 0)$. El algoritmo \ref{busquedalocal} muestra los pasos a seguir del LS.
+
+\begin{algorithm}
+\KwData{Solución $S$} \KwResult{Solución $S*$}
+
+$S* = S$ \\
+\While{contador $<$ IteracionMax} {
+	$k =$ arg min $\{\sum_{\forall J} w_{ji} / b_{i} | \forall i \in I \wedge i == 1\}$ \\
+	$S' = S* - k$ \\
+	Creamos lista de vecinos $N$ con respecto a $S'$ \\
+	$S'' =$ arg max $\{f(n) | n \in N \}$ \\
+	\If{$S* < S''$} {
+		$S* = S''$ \\
+		Contador = 0 \\
+	}
+	contador++
+}
+Regresar $S*$ \\
+
+\caption{Pseudocódigo búsqueda local}
+\label{busquedalocal}
+\end{algorithm}
+
+Los algoritmos \ref{constructivo} y \ref{busquedalocal} son utilizados dentro de SS para crear la población inicial. El algoritmo \ref{busquedadispersa} muestra los pasos generales para el SS.
+
+\begin{algorithm}
+\KwData{Instancia de MKP.}
+\KwResult{Solucion S}
+P = Poblaci\'on de soluciones de tamaño $n$ \\
+S = La mejor soluci\'on de P \\
+\While{Cantidad m\'axima de iteraciones}
+{
+	Escoger el conjunto de referencia R de P \\
+	Combinar las soluciones de R y agregarlas a P \\
+	Reajustar el tamaño de P \\
+	Actualizamos S
+}
+Regresar S
+\caption{Pseudocódigo b\'usqueda dispersa}
+\label{busquedadispersa}
+\end{algorithm}
+
+Cada uno de los pasos del algoritmo \ref{busquedadispersa} se implementaron como sigue:
+\paragraph{Poblaci\'on} cada soluci\'on de la poblaci\'on fue creada con un constructivo y despues se aplic\'o una b\'usqueda local.
+\paragraph{Conjunto de referencia} se escogio un porcentaje de la poblaci\'on para el conjunto, el cual la mitad es para soluciones de calidad y la otra parte soluciones diversificadas.
+\paragraph{Combinaciones} se escoge dos soluciones al azar del conjunto de referencia y se combinan de tal forma de escoger un objeto al azar y la nueva solucio\'n consta de la primera parte antes del objeto seleccionado de una soluci\'on y la otra del resto. Se recupera factibilidad y se le aplica a la nueva soluci\'on b\'usqueda local.
+\paragraph{Reajuste de la poblaci\'on} conservamos las $n$ mejores soluciones.
+
+\section{Instancias del MKP}
+
+Se utiliza un conjunto de instancias de la literatura SAC-94 \cite{beasley}.
+El conjunto esta basado en problemas reales, provenientes de diferentes artículos, conteniendo con un número de objetos entre 10-105 y n\'umero de recursos entre 2 y 30.
+
+\section{Resultados}
+
+Se ejecuto el SS con un población de 50 soluciones y un máximo de iteraciones de 200. Se hizo 20 r\'eplicas para cada instancia y se reporta el promedio de estas. La tabla \ref{resultados} muestra los resultados obtenidos.
+
+Se puede observar en la tabla \ref{resultados} que en 4 instancias se alcanzo el optimo, mientras que las demás obtuvieron buen resultado.
+
+\section{Conclusiones}
+
+El SS es una buena opción de metaheur\'istico para el MKP. Los resultados obtenidos fueron buenos. Se observa también que la solución obtenida mediante el constructivo esta en promedio 30\% por debajo del optimo, la solución reportada para la búsqueda local esta en promedio 5\% por debajo del optimo. En algunas instancias no se reporta mejora con la búsqueda local esto es posiblemente por la estructura de la instancia lo cual abre una oportunidad para estudiarlas.
+
+\begin{center}
+\begin{table}
+\begin{tabular}{lcccc}
+\toprule
+{Inst} & {Opt} & {Const} & {LS} & {SS} \\
+\midrule
+hp1 & 3418 & 2917  &2978 & 3336 \\
+hp2 & 3186 & 2412  &2412 & 3002 \\
+pb1 & 3090 & 2770  &2770 & 2992 \\
+pb2 & 3186 & 2616  &2616 & 3072 \\
+pb4 & 95168 & 82162  &82162 & 91935 \\
+pb5 & 2139 & 1971  &1971 & 2076 \\
+pb6 & 776 & 477  &625 & 723 \\
+pb7 & 1035 & 621  &946 & 1005 \\
+pet2 & 87061 & 69394  &69394 & 85943 \\
+\color{red} pet3 & \color{red} 4015 & 2945  &3225 & \color{red} 4015 \\
+\color{red} pet4 & \color{red} 6120 & 2855  &3660 & \color{red} 6120 \\
+\color{red} pet5 & \color{red} 12400 & 7525  &10330 & \color{red} 12400 \\
+pet6 & 10618 & 10112  &10195 & 10520 \\
+pet7 & 16537 & 14761  &14938 & 16142\\
+sento1 & 7772 & 998  &6997 & 7636\\
+sento2 & 8722 & 5465  &5465 & 8642\\
+weing1 & 141278 & 102133  &102678 & 140668 \\
+weing2 & 130883 & 47965  &65557 & 130013 \\
+weing3 & 95677 & 51927  &73768 & 94908 \\
+\color{red} weing4 & \color{red} 119337 & 77122  &92590 & \color{red} 119337 \\
+weing5 & 98796 & 56027  &67562 & 98521 \\
+weing6 & 130623 & 90470  &90470 & 129032 \\
+weing7 & 1095445 & 886214  &1058098 & 1092260 \\
+weing8 & 624319 & 156274  &316272 & 610644 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados del SS.}
+\label{resultados}
+\end{table}
+\end{center}
+
+\begin{thebibliography}{X}
+\bibitem{beasley} \textsc{E. Beasley.} \textit{OR-Library: distributing test problems by electronic mail.} \\
+\texttt{Journal of the Operational Research Society} 41.11 (1990), pp. 1069–1072.
+\end{thebibliography}
+
+\end{document}
